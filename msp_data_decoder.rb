@@ -527,13 +527,9 @@ class MSP
 	  table = nil
 	  value_index =
 	    if mode == :lookup and type != :string
-	      #last_null_index = d_end.rindex "\0"
-	      #table = d_end.slice(0..last_null_index).split "\0"
-	      #last_null_index + 1
               table_data = d_end.match(/\A(?:[\w-]+\x00)+/).to_s
               table = table_data.split "\x00"
               table_data.length
-              #binding.pry
 	    else
 	      0
 	    end

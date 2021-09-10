@@ -84,7 +84,6 @@ class MSP
     def self.pack_command cmd, *data
       cmd_no = COMMANDS.invert[cmd]
       raise ArgumentError, "unknown command: #{cmd}" if cmd_no.nil?
-      #data_packed = encode cmd, *data
       data_packed = DataEncoder.respond_to?(cmd) ? DataEncoder.send(cmd, *data) || '' : ''
       header = Header.pack cmd_no, data_packed.length
       cksum = cksum_packed data_packed, header.cksum
@@ -96,9 +95,6 @@ class MSP
       result_char = serial_port.readchar
       raise ProtoError::UnrecognizedResultChar, "unrecognized result char: #{result_char}" unless %w[ > ! ].include? result_char
       header = Header.read serial_port
-      #pp header
-      #header = Header.new 1, 2, 3
-      #binding.pry
       calc_cksum = header.cksum
       data_size = nil
       if header.size == 255
@@ -111,15 +107,10 @@ class MSP
       end
       data = serial_port.read data_size
       raise ProtoError::ReadTimeout, 'failed to read payload' if data.nil?
-      #serial_port.readbyte
-      #data = serial_port.read 19
       received_cksum = MSP.read_checksum serial_port
       calc_cksum = cksum data, calc_cksum
       raise ProtoError::ChecksumMismatch, "bad checksum: received #{received_cksum.inspect}, calculated #{calc_cksum.inspect}" unless received_cksum == calc_cksum
       raise CommandFailed, 'the command returned an error' if result_char == ?!
-
-      #header.cmd = 21
-
       command = COMMANDS[header.cmd]
       raise ProtoError::UnknownCommandID, "received unknown command id: #{header.cmd}" if command.nil?
       DataDecoder.send(command, data) if DataDecoder.respond_to? command
@@ -131,13 +122,7 @@ class MSP
 
     def self.command serial_port, cmd, *data
       command_noack serial_port, cmd, *data
-      #if @a
-      #sleep 1
-      #serial_port.readpartial 1000
-      #else
-      #@a = 1
       read_response serial_port
-      #end
     end
 
     class Header < Struct.new :size, :cmd, :cksum
@@ -171,7 +156,6 @@ class MSP
     def self.pack_command cmd, *data
       cmd_no = COMMANDS.invert[cmd]
       raise ArgumentError, "unknown command: #{cmd}" if cmd_no.nil?
-      #packed_data = encode cmd, *data
       data_packed = DataEncoder.respond_to?(cmd) ? DataEncoder.send(cmd, *data) || '' : ''
       header = Header.pack 0, cmd_no, data_packed.length
       cksum = cksum_packed data_packed, header.cksum
@@ -182,15 +166,12 @@ class MSP
       MSP.sync! serial_port, '$X'
       result_char = serial_port.readchar
       raise ProtoError::UnrecognizedResultChar, "unrecognized result char: #{result_char}" unless %w[ > ! ].include? result_char
-
-      #MSP.sync! serial_port, '$X>'
       header = Header.read serial_port
       data = serial_port.read header.size
       raise ProtoError::ReadTimeout, 'failed to read payload' if data.nil?
       cksum = MSP.read_checksum serial_port
       calc_cksum = cksum data, header.cksum
       raise ProtoError::ChecksumMismatch, "bad checksum: received #{cksum.inspect}, calculated #{calc_cksum.inspect}" unless cksum == calc_cksum
-      #decode header.cmd, data
       raise CommandFailed, 'the command returned an error' if result_char == ?!
       command = COMMANDS[header.cmd]
       raise ProtoError::UnknownCommandID, "received unknown command id: #{header.cmd}" if command.nil?
@@ -208,7 +189,6 @@ class MSP
     def self.command serial_port, cmd, *data
       command_noack serial_port, cmd, *data
       read_response serial_port, *data
-      #serial_port.readpartial 1000
     end
 
     class Header < Struct.new :flags, :cmd, :size, :cksum
